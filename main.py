@@ -211,6 +211,28 @@ async def on_guild_channel_create(channel: GuildChannel):
 
 
 @client.event
+async def on_guild_channel_delete(channel: GuildChannel):
+    channel_type, ticket_number = get_channel_info(channel)
+
+    if channel_type != ChannelType.OPEN_TICKET:
+        return
+
+    try:
+        page_id = TICKET_TO_PAGE_ID[ticket_number]
+
+        notion.pages.update(
+            page_id=page_id,
+            properties={
+                "Ticket Status": {"select": {"name": "Closed"}},
+                "Closed At": {"date": {"start": datetime.now().isoformat()}},
+            },
+        )
+        logger.info(f"Updated Notion page for ticket {ticket_number} to closed")
+    except Exception as e:
+        logger.error(f"Error updating Notion page for ticket {ticket_number}: {e}")
+
+
+@client.event
 async def on_guild_channel_update(before: GuildChannel, after: GuildChannel):
     before_channel_type, _ = get_channel_info(before)
     if before_channel_type != ChannelType.OPEN_TICKET:
