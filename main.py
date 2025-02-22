@@ -126,14 +126,19 @@ def get_channel_info(channel: GuildChannel) -> tuple[ChannelType, int | None]:
         return ChannelType.UNKNOWN, None
 
 
+def get_mentioned_users(message: Message) -> list[str]:
+    return [mention.name for mention in message.mentions]
+
+
 def handle_author_resolution(message: Message, ticket_number: int):
-    if len(message.mentions) == 0:
+    mentioned_users = get_mentioned_users(message)
+    if len(mentioned_users) == 0:
         logger.error(
             f"No user mentioned in message {message.content} for ticket {ticket_number}"
         )
         return
 
-    username = message.mentions[0].name
+    username = mentioned_users[0]
 
     logger.info(
         f"Resolving ticket {ticket_number} to {username} on Notion page {TICKET_TO_PAGE_ID[ticket_number]}"
@@ -150,6 +155,31 @@ def handle_author_resolution(message: Message, ticket_number: int):
         )
     except Exception as e:
         logger.error(f"Error resolving ticket: {e}")
+
+
+def handle_closed_by_resolution(message: Message, ticket_number: int):
+    mentioned_users = get_mentioned_users(message)
+    if len(mentioned_users) == 0:
+        logger.error(
+            f"No user mentioned in 'Closed by' message {message.content} for ticket {ticket_number}"
+        )
+        return
+
+    username = mentioned_users[0]
+
+    logger.info(f"Ticked {ticket_number} closed by {username}")
+
+    page_id = TICKET_TO_PAGE_ID[ticket_number]
+
+    try:
+        notion.pages.update(
+            page_id=page_id,
+            properties={
+                "Closed By": {"rich_text": [{"text": {"content": username}}]},
+            },
+        )
+    except Exception as e:
+        logger.error(f"Error in 'Closed by' resolution: {e}")
 
 
 def handle_content_update(message: Message, ticket_number: int):
@@ -304,9 +334,12 @@ async def on_message(message: Message):
         and DISCORD_TICKET_START_MESSAGE in message.content
     ):
         handle_author_resolution(message, ticket_number)
-        return
 
-    if (
+    # TODO: 'Closed By' username resolution
+    # elif message.author.id == DISCORD_TICKET_BOT_ID and "Closed by" in message.content:
+    #     handle_closed_by_resolution(message, ticket_number)
+
+    elif (
         channel_type == ChannelType.OPEN_TICKET
         and message.author.id != DISCORD_TICKET_BOT_ID
     ):
