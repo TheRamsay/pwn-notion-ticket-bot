@@ -56,6 +56,40 @@ class ChannelType(Enum):
     UNKNOWN = 3
 
 
+# Get database by ID and create all properties
+def init_database():
+    try:
+        notion.databases.update(
+            database_id=NOTION_PARENT_DATABASE_ID,
+            title=[{"text": {"content": "PWN Discord Tickets 🎫"}}],
+            description=[
+                {
+                    "text": {
+                        "content": "Database for PWN Discord Tickets, created by the Discord bot. Each ticket is a page in this database. Messages in the ticket channels are appended to the page in real-time."
+                    }
+                }
+            ],
+            properties={
+                "Name": {"title": {}},
+                "Ticket Status": {
+                    "select": {
+                        "options": [
+                            {"name": "Open 🔓", "color": "yellow"},
+                            {"name": "Closed ✅", "color": "green"},
+                        ]
+                    }
+                },
+                "Created At": {"date": {}},
+                "Closed At": {"date": {}},
+                "Author": {"rich_text": {}},
+                "Related Links": {"url": {}},
+            },
+        )
+        logger.info("Initialized database with ID {NOTION_PARENT_DATABASE_ID}")
+    except Exception as e:
+        logger.error(f"Error initializing database: {e}")
+
+
 @lru_cache
 def cached_regex(pattern: re.Pattern[str], string: str) -> re.Match[str] | None:
     return pattern.match(string)
@@ -193,7 +227,7 @@ async def on_guild_channel_create(channel: GuildChannel):
             icon={"emoji": "🎫"},
             properties={
                 "Name": {"title": [{"text": {"content": f"Ticket #{ticket_number}"}}]},
-                "Ticket Status": {"select": {"name": "Open"}},
+                "Ticket Status": {"select": {"name": "Open 🔓"}},
                 "Created At": {"date": {"start": datetime.now().isoformat()}},
                 "Related Links": {"url": channel.jump_url},
             },
@@ -223,7 +257,7 @@ async def on_guild_channel_delete(channel: GuildChannel):
         notion.pages.update(
             page_id=page_id,
             properties={
-                "Ticket Status": {"select": {"name": "Closed"}},
+                "Ticket Status": {"select": {"name": "Closed ✅"}},
                 "Closed At": {"date": {"start": datetime.now().isoformat()}},
             },
         )
@@ -248,7 +282,7 @@ async def on_guild_channel_update(before: GuildChannel, after: GuildChannel):
         notion.pages.update(
             page_id=page_id,
             properties={
-                "Ticket Status": {"select": {"name": "Closed"}},
+                "Ticket Status": {"select": {"name": "Closed ✅"}},
                 "Closed At": {"date": {"start": datetime.now().isoformat()}},
             },
         )
@@ -279,5 +313,11 @@ async def on_message(message: Message):
         handle_content_update(message, ticket_number)
 
 
-logger.info("Starting the bot")
-client.run(DISCORD_BOT_TOKEN)
+if __name__ == "__main__":
+    if len(os.sys.argv) > 1:
+        if os.sys.argv[1] == "init":
+            init_database()
+            os.sys.exit(0)
+
+    logger.info("Starting the bot")
+    client.run(DISCORD_BOT_TOKEN)
