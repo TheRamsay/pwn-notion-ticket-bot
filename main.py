@@ -25,6 +25,9 @@ NOTION_PARENT_DATABASE_ID = os.environ["NOTION_PARENT_DATABASE_ID"]
 NOTION_TOKEN = os.environ["NOTION_TOKEN"]
 SAVE_FILE_PATH = os.environ["SAVE_FILE_PATH"]
 
+TICKET_OPEN_LABEL = "Open 🔓"
+TICKET_CLOSED_LABEL = "Closed ✅"
+
 
 URL_REGEX_COMPILED = re.compile(r"(.*?)(https?://[^\s]+)")
 TICKET_TO_PAGE_ID = {}
@@ -74,8 +77,8 @@ def init_database():
                 "Ticket Status": {
                     "select": {
                         "options": [
-                            {"name": "Open 🔓", "color": "yellow"},
-                            {"name": "Closed ✅", "color": "green"},
+                            {"name": TICKET_OPEN_LABEL, "color": "yellow"},
+                            {"name": TICKET_CLOSED_LABEL, "color": "green"},
                         ]
                     }
                 },
@@ -257,7 +260,7 @@ async def on_guild_channel_create(channel: GuildChannel):
             icon={"emoji": "🎫"},
             properties={
                 "Name": {"title": [{"text": {"content": f"Ticket #{ticket_number}"}}]},
-                "Ticket Status": {"select": {"name": "Open 🔓"}},
+                "Ticket Status": {"select": {"name": TICKET_OPEN_LABEL}},
                 "Created At": {"date": {"start": datetime.now().isoformat()}},
                 "Related Links": {"url": channel.jump_url},
             },
@@ -287,7 +290,7 @@ async def on_guild_channel_delete(channel: GuildChannel):
         notion.pages.update(
             page_id=page_id,
             properties={
-                "Ticket Status": {"select": {"name": "Closed ✅"}},
+                "Ticket Status": {"select": {"name": TICKET_CLOSED_LABEL}},
                 "Closed At": {"date": {"start": datetime.now().isoformat()}},
             },
         )
@@ -312,7 +315,7 @@ async def on_guild_channel_update(before: GuildChannel, after: GuildChannel):
         notion.pages.update(
             page_id=page_id,
             properties={
-                "Ticket Status": {"select": {"name": "Closed ✅"}},
+                "Ticket Status": {"select": {"name": TICKET_CLOSED_LABEL}},
                 "Closed At": {"date": {"start": datetime.now().isoformat()}},
             },
         )
