@@ -88,7 +88,7 @@ def init_database():
                 "Related Links": {"url": {}},
             },
         )
-        logger.info("Initialized database with ID {NOTION_PARENT_DATABASE_ID}")
+        logger.info(f"Initialized database with ID {NOTION_PARENT_DATABASE_ID}")
     except Exception as e:
         logger.error(f"Error initializing database: {e}")
 
